@@ -49,9 +49,9 @@ function App() {
       <div className="text-center mb-4">
         <img
           src="/images/clintnobg.png"
-          alt="Stethoscope"
-          width="501"
-          height="501"
+          alt="CLINT"
+          width="701"
+          height="701"
           className="mb-3 logo-img"
           style={{ objectFit: 'contain' }}
         />
