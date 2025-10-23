@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 from tensorflow.keras.models import load_model
 from huggingface_hub import InferenceClient
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -18,6 +19,10 @@ client = InferenceClient(
     provider="featherless-ai",
     api_key=os.environ["HF_API_KEY"],
 )
+
+# Load from local path of BERT model for biomedical NER
+local_model_path ="BERT/models/biomedical-ner-all/" 
+med_NER={}
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -36,7 +41,32 @@ def predict():
 
         if not query:
             return jsonify({'error': 'No query provided'}), 400
-        
+
+        tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+        model = AutoModelForTokenClassification.from_pretrained(local_model_path)
+
+        # Create NER pipeline
+        nlp = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+
+        # Example text
+        text = query
+
+        # Run NER
+        entities = nlp(text)
+
+        # Display results
+        for ent in entities:
+            word = ent['word']
+            entity_group = ent['entity_group']
+            score = round(ent['score'], 3)
+            
+            med_NER[word] = {
+                'entity_group': entity_group,
+                'score': score
+            }
+            print(f"{word} → {entity_group} (score: {score:.3f})")
+
+
         # Get files or default value
         pdf = request.files.get('pdf')
         xray = request.files.get('xray')
@@ -145,11 +175,14 @@ def predict():
             print("Prediction for", eye_img, ":", eye_disease_prediction)
 
         structured_prompt = f"""
+        Medical query analysis using entities(NER):{med_NER} \n
         x_ray_disease: {predicted_label if xray and xray != 'no_image_data' else 'N/A'} \n
         eye_disease: {eye_disease_prediction if eye_image and eye_image != 'no_image_data' else 'N/A'} \n
         
         Based on this query: {query}
         
+        if there are no Medical related query found using NER then respond that "No relevant medical information found."  Otherwise,
+
         Provide medical advice in this exact format:
 
         ### Key Suggestions for Self-Care
