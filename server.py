@@ -9,10 +9,20 @@ from PIL import Image
 import numpy as np
 from tensorflow.keras.models import load_model
 from huggingface_hub import InferenceClient
-from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+from PyPDF2 import PdfReader
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from transformers import AutoTokenizer, AutoModelForTokenClassification,AutoModelForSeq2SeqLM,pipeline
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+def extract_text_from_pdf(pdf_path):
+    reader = PdfReader(pdf_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() + "\n"
+    return text
 
 # Initialize the Hugging Face client
 client = InferenceClient(
@@ -23,6 +33,9 @@ client = InferenceClient(
 # Load from local path of BERT model for biomedical NER
 local_model_path ="BERT/models/biomedical-ner-all/" 
 med_NER={}
+
+# Load from local path of BART model for summarization
+local_BART_model_path = "BART/models/bart-large-cnn/"
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -76,6 +89,19 @@ def predict():
         if pdf and pdf != 'no_image_data':
             # Process PDF file
             pdf.save(f"./uploads/{pdf.filename}")
+            tokenizer = AutoTokenizer.from_pretrained(local_BART_model_path)
+            model = AutoModelForSeq2SeqLM.from_pretrained(local_BART_model_path)
+
+            # Create summarization pipeline
+            summarizer = pipeline("summarization", model=model, tokenizer=tokenizer)
+
+            # Example text
+            pdf_text = extract_text_from_pdf(f"./uploads/{pdf.filename}")
+
+            summary = summarizer(pdf_text, max_length=120, min_length=40, do_sample=False)[0]['summary_text']
+
+            print("\n--- Summary ---\n", summary)
+
             
         if xray and xray != 'no_image_data':
             # Process X-ray image
@@ -176,6 +202,7 @@ def predict():
 
         structured_prompt = f"""
         Medical query analysis using entities(NER):{med_NER} \n
+        summary_of_EHR_report: {summary if pdf and pdf != 'no_image_data' else 'N/A'} \n
         x_ray_disease: {predicted_label if xray and xray != 'no_image_data' else 'N/A'} \n
         eye_disease: {eye_disease_prediction if eye_image and eye_image != 'no_image_data' else 'N/A'} \n
         
