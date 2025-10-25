@@ -6,7 +6,10 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
+import numpy as np
+from tensorflow.keras.models import load_model
 from huggingface_hub import InferenceClient
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -16,6 +19,10 @@ client = InferenceClient(
     provider="featherless-ai",
     api_key=os.environ["HF_API_KEY"],
 )
+
+# Load from local path of BERT model for biomedical NER
+local_model_path ="BERT/models/biomedical-ner-all/" 
+med_NER={}
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -34,7 +41,32 @@ def predict():
 
         if not query:
             return jsonify({'error': 'No query provided'}), 400
-        
+
+        tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+        model = AutoModelForTokenClassification.from_pretrained(local_model_path)
+
+        # Create NER pipeline
+        nlp = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+
+        # Example text
+        text = query
+
+        # Run NER
+        entities = nlp(text)
+
+        # Display results
+        for ent in entities:
+            word = ent['word']
+            entity_group = ent['entity_group']
+            score = round(ent['score'], 3)
+            
+            med_NER[word] = {
+                'entity_group': entity_group,
+                'score': score
+            }
+            print(f"{word} → {entity_group} (score: {score:.3f})")
+
+
         # Get files or default value
         pdf = request.files.get('pdf')
         xray = request.files.get('xray')
@@ -47,8 +79,46 @@ def predict():
             
         if xray and xray != 'no_image_data':
             # Process X-ray image
-            xray.save(f"./uploads/{xray.filename}")
+            try:
+                x_ray_upload_path = f"./uploads/{xray.filename}"
+                xray.save(x_ray_upload_path)
+                if not os.path.exists(x_ray_upload_path):
+                    raise FileNotFoundError(f"Failed to save image: {x_ray_upload_path}")
+            except Exception as e:
+                return jsonify({'error': f'Error processing eye image: {str(e)}'}), 500
             
+            # Paths
+            model_path = "./xray_model_final.h5"
+            labels_path = "./labels.json"
+            image_path = f"./uploads/{xray.filename}"
+            
+            # Load model
+            model = load_model(model_path)
+
+            # Load labels
+            with open(labels_path, "r") as f:
+                all_labels = json.load(f)
+
+            IMG_SIZE = 224
+
+            def predict_xray(img_path):
+                img = Image.open(img_path).convert("RGB").resize((IMG_SIZE, IMG_SIZE))
+                img_array = np.array(img, dtype=np.float32) / 255.0
+                img_array = np.expand_dims(img_array, axis=0)
+
+                probs = model.predict(img_array, verbose=0)[0]  # get probabilities
+                best_index = np.argmax(probs)                   # find index of highest probability
+                best_label = all_labels[best_index]             # get corresponding label
+                best_prob = float(probs[best_index])            # convert to float
+
+                return best_label, best_prob
+
+            # ---- Predict on a single image ----
+            predicted_label, predicted_prob = predict_xray(image_path)
+
+            print(f"\n🩻 Image: {os.path.basename(image_path)}")
+            print(f"Predicted Finding: {predicted_label} ({predicted_prob:.4f})")
+
         if eye_image and eye_image != 'no_image_data':
             # Process eye image
             try:
@@ -105,10 +175,14 @@ def predict():
             print("Prediction for", eye_img, ":", eye_disease_prediction)
 
         structured_prompt = f"""
+        Medical query analysis using entities(NER):{med_NER} \n
+        x_ray_disease: {predicted_label if xray and xray != 'no_image_data' else 'N/A'} \n
         eye_disease: {eye_disease_prediction if eye_image and eye_image != 'no_image_data' else 'N/A'} \n
         
         Based on this query: {query}
         
+        if there are no Medical related query found using NER then respond that "No relevant medical information found."  Otherwise,
+
         Provide medical advice in this exact format:
 
         ### Key Suggestions for Self-Care
