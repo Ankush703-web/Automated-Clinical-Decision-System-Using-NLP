@@ -1,70 +1,183 @@
-# Getting Started with Create React App
+# 🏥 CLINT – Clinical Language Intelligence Using NLP & Transformers  
+### _AI-powered Clinical Query Assistant with Multi-Modal Medical Analysis_  
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+CLINT is a full-stack medical AI application that allows users to upload **EHR reports (PDFs)**, **X-Ray images**, **Eye images**, and enter any **clinical query**, after which the system processes all inputs and generates structured, evidence-based medical guidance.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🚀 Features
 
-### `npm start`
+### 🔍 1. Clinical Query Understanding (NER)
+- Extracts medical entities from query text using **Biomedical BERT NER**  
+- Detects diseases, drugs, anatomy, symptoms & more
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 📄 2. EHR (PDF) Summarization
+- Extracts text from PDF using `PyPDF2`  
+- Summarizes using **BART Large CNN**
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 🩻 3. X-Ray Disease Classification
+- Upload chest X-Ray  
+- TensorFlow (`xray_model_final.h5`) + labels.json  
+- Predicts top disease with probability
 
-### `npm test`
+### 👁️ 4. Eye Disease Detection
+- Upload retinal eye image  
+- PyTorch ResNet-18 model  
+- Loads trained weights from `eye_disease_model.pth`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 🤖 5. AI-Generated Structured Medical Advice
+- Uses `Intelligent-Internet/II-Medical-8B-1706`  
+- Output includes:
+  - Key Suggestions
+  - Lifestyle Modifications
+  - When to Seek Medical Attention
+  - Warnings & Precautions  
+- Delivered in Markdown format
 
-### `npm run build`
+> ⚠️ Disclaimer: This is for educational & research use only.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+---
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🛠 Tech Stack
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Frontend
+- React.js  
+- Bootstrap  
+- react-markdown
 
-### `npm run eject`
+### Backend
+- Python (Flask)  
+- PyTorch + TorchVision  
+- TensorFlow/Keras  
+- Transformers (HuggingFace)  
+- HuggingFace Inference API  
+- PIL, PyPDF2  
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 📁 Project Structure
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+📦 CLINT ├── frontend/ │   ├── App.js │   ├── App.css │   └── public/images/clintnobg.png │ ├── backend/ │   ├── server.py │   ├── eye_disease_model.pth │   ├── xray_model_final.h5 │   ├── classes.json │   ├── labels.json │   ├── BERT/models/biomedical-ner-all/ │   ├── BART/models/bart-large-cnn/ │   └── uploads/
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## ⚙️ Installation & Setup
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 1️⃣ Clone the Repository
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+git clone https://github.com/Ankush703-web/Automated-Clinical-Decision-System-using-NLP.git
 
-### Code Splitting
+cd Automated-Clinical-Decision-System-using-NLP
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+🖥 Backend Setup (Flask)
 
-### Making a Progressive Web App
+Install dependencies
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+pip install -r requirements.txt
 
-### Advanced Configuration
+Set HuggingFace API Key
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+export HF_API_KEY="your_api_key_here"
 
-### Deployment
+Run Backend
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+python server.py
 
-### `npm run build` fails to minify
+Backend runs at:
+➡️ http://localhost:5000
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+---
+
+🌐 Frontend Setup (React)
+
+Install packages
+
+npm install
+
+Start frontend
+
+npm start
+
+Frontend runs at:
+➡️ http://localhost:3000
+
+
+---
+
+🧪 Usage Guide
+
+1. Upload one or more of:
+
+PDF (EHR report)
+
+Chest X-Ray
+
+Eye image
+
+
+2. Enter your clinical query:
+
+What diagnosis fits this report?
+
+3. Click Analyze & Respond
+
+The system performs:
+
+Medical NER
+
+PDF summarization
+
+X-ray classification
+
+Eye disease detection
+
+LLM reasoning
+
+
+And returns structured medical advice.
+
+
+---
+
+📦 API Endpoint
+
+POST /predict
+
+Form-Data Fields:
+
+query: text
+pdf: file (optional)
+xray: file (optional)
+eyeImage: file (optional)
+
+Response JSON:
+
+{
+  "status": "success",
+  "response": "markdown-formatted medical suggestions"
+}
+
+
+---
+
+📜 License
+
+MIT
+
+
+---
+
+🤝 Contributing
+
+Pull requests and improvements are welcome.
+
+
+---
+
+⭐ Show Support
+
+If you found this useful, consider giving this repo a ⭐ on 
